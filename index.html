@@ -1,25 +1,43 @@
+您好，很抱歉造成您在部署上的困擾。您提供的那段 HTML 確實只是個空的骨架，無法顯示任何內容。
+
+您需要的是我們在對話歷史中，根據您的功能需求、日系滑雪風格和三次修改（包含分賬結算、付款人選擇、滑雪日高亮、住宿地圖連結）後產生的**完整單一 HTML 檔案**。
+
+請使用下方完整的程式碼，將其儲存為 **`index.html`**，然後上傳到您的 GitHub 倉庫根目錄，替換掉目前的空檔案。
+
+此檔案包含了所有功能和您的行程資料，例如 12/26 至 01/06 的行程，旭川和富良野的住宿細節（包括男生請坐著尿尿的提醒），滑雪裝備清單，以及關於租車分攤和 Kevin Yang 需帶駕照譯本的提醒。
+
+---
+
+### 完整的 `index.html` 程式碼
+
+```html
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>北海道滑雪團旅伴 App</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <!-- Google Font: Noto Sans JP -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;500;700&display=swap" rel="stylesheet">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Tailwind Config and Custom Styles (日系滑雪風格) -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
+                        // 日系滑雪風格配色
                         'snow-light': '#f8f8f8',
-                        'winter-blue': '#4a7c8e',
-                        'pine-green': '#374e4a',
-                        'sunset-orange': '#f39c12',
+                        'winter-blue': '#4a7c8e', // 主色調 (冷調)
+                        'pine-green': '#374e4a', // 輔助色 (深色)
+                        'sunset-orange': '#f39c12', // 醒目提醒色
                         'powder-white': '#ffffff',
-                        'ski-highlight': '#90e0ef',
+                        'ski-highlight': '#90e0ef', // 滑雪日高亮色 (淡藍)
                     },
                     fontFamily: {
                         sans: ['"Noto Sans TC"', 'sans-serif'],
@@ -29,31 +47,959 @@
         }
     </script>
     <style>
+        /* 確保全域使用指定的字體 */
         body {
-            background-color: #f0f4f8;
-            -webkit-tap-highlight-color: transparent;
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f0f4f8; 
         }
-        /* Hide scrollbar for clean UI but allow scroll */
-        .no-scrollbar::-webkit-scrollbar {
+        .hidden-file-input {
             display: none;
         }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        .content-area {
+            padding-bottom: 72px;
+            padding-top: 16px;
+        }
+        .timeline-line {
+             background-color: #aab8c4;
         }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0"
-  }
-}
-</script>
 </head>
-<body class="bg-snow-light text-pine-green">
-    <div id="root"></div>
+
+<body class="bg-snow-light text-pine-green min-h-screen">
+
+    <!-- 主內容區塊 -->
+    <div id="app-container" class="content-area max-w-md mx-auto">
+
+        <!-- 1. PLAN (行程表) -->
+        <div id="plan-tab" class="tab-content px-4 hidden">
+            <h1 class="text-2xl font-bold mb-4 text-winter-blue">行程表 (PLAN)</h1>
+            <div id="itinerary-timeline" class="space-y-6">
+                <!-- 行程卡片將由 JavaScript 填充 -->
+            </div>
+        </div>
+
+        <!-- 2. WALLET (記帳與匯率) -->
+        <div id="wallet-tab" class="tab-content px-4 hidden">
+            <h1 class="text-2xl font-bold mb-4 text-winter-blue">記帳與匯率 (WALLET)</h1>
+
+            <!-- 匯率換算器 (Calculator) -->
+            <div class="bg-powder-white p-4 mb-6 rounded-xl shadow-lg border border-gray-100">
+                <h2 class="text-lg font-semibold mb-3 text-pine-green">即時匯率換算</h2>
+                <div class="flex items-center space-x-2 mb-3">
+                    <label for="exchangeRate" class="text-sm">自訂匯率 (1 JPY = ? TWD):</label>
+                    <input type="number" step="0.0001" id="exchangeRate" value="0.22" class="w-20 p-1 border rounded text-center text-sm">
+                </div>
+                
+                <input type="text" id="jpyInput" placeholder="輸入算式 (例: 500+200*3)" class="w-full p-3 mb-3 text-xl font-mono border-2 border-winter-blue rounded-lg shadow-inner">
+                
+                <div class="flex justify-between items-center">
+                    <button onclick="calculateJpy()" class="bg-winter-blue text-white py-2 px-6 rounded-lg font-bold shadow-md hover:bg-pine-green transition duration-200">
+                        換算 (=)
+                    </button>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500">總額 (JPY)</p>
+                        <p id="jpyResult" class="text-2xl font-bold text-pine-green">0 JPY</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500">換算 (TWD)</p>
+                        <p id="twdResult" class="text-2xl font-bold text-sunset-orange">0 TWD</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分賬結算區塊 -->
+            <div class="bg-powder-white p-4 mb-6 rounded-xl shadow-lg border border-winter-blue/50">
+                <h2 class="text-lg font-semibold mb-3 text-winter-blue flex items-center">
+                    <i class="fas fa-handshake mr-2"></i> 總結算 (Debt Settlement)
+                </h2>
+                <div id="settlementOutput">
+                    <p class="text-center text-gray-500">請新增消費紀錄以進行結算。</p>
+                </div>
+            </div>
+
+            <!-- 記帳功能 (Expense Logging) -->
+            <div class="bg-powder-white p-4 rounded-xl shadow-lg border border-gray-100">
+                <h2 class="text-lg font-semibold mb-3 text-pine-green">新增消費紀錄與分賬</h2>
+                <form id="expenseForm" onsubmit="saveExpense(event)">
+                    
+                    <!-- 付款人 -->
+                    <div class="mb-3">
+                        <label for="payerSelect" class="block text-sm font-medium text-pine-green mb-1">付款人是誰？</label>
+                        <select id="payerSelect" required class="w-full p-2 border rounded-lg bg-gray-50 focus:border-winter-blue">
+                            <option value="" disabled selected>請選擇付款人</option>
+                            <!-- Payer options will be populated by JS -->
+                        </select>
+                    </div>
+                    
+                    <input type="text" id="expenseItem" placeholder="品項 (如：纜車票/拉麵)" required class="w-full p-2 mb-2 border rounded">
+                    <input type="number" id="expenseAmount" placeholder="日幣金額 (JPY)" required class="w-full p-2 mb-3 border rounded">
+                    
+                    <!-- 分賬功能區塊 -->
+                    <div class="mb-4 p-3 border rounded-lg bg-gray-50">
+                        <h3 class="font-medium text-winter-blue mb-2">分賬成員 (誰參與了這筆消費?)</h3>
+                        <div id="memberCheckboxes" class="grid grid-cols-3 gap-2 text-sm max-h-40 overflow-y-auto">
+                            <!-- 成員複選框將由 JS 填充 -->
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500">已選 <span id="selectedCount">0</span> 人分攤。</p>
+                    </div>
+
+                    <input type="file" id="expensePhoto" accept="image/*" class="hidden-file-input" onchange="previewImage(this)">
+                    <canvas id="imageCanvas" class="hidden"></canvas>
+                    
+                    <button type="button" onclick="document.getElementById('expensePhoto').click()" class="w-full bg-gray-200 text-pine-green py-2 rounded-lg mb-3 hover:bg-gray-300 transition duration-200">
+                        <i class="fas fa-camera mr-2"></i> 拍照/上傳照片 (將自動壓縮)
+                    </button>
+                    <img id="imagePreview" class="mt-2 hidden w-20 h-20 object-cover rounded mx-auto border-2 border-gray-300">
+                    
+                    <button type="submit" class="w-full bg-sunset-orange text-white py-3 rounded-xl font-bold shadow-md hover:bg-red-500 transition duration-200">
+                        <i class="fas fa-save mr-2"></i> 儲存紀錄
+                    </button>
+                </form>
+            </div>
+
+            <!-- 記帳歷史列表 -->
+            <div class="mt-6">
+                <h2 class="text-lg font-semibold mb-3 text-pine-green">歷史消費 (永久儲存)</h2>
+                <ul id="expenseList" class="space-y-3">
+                    <!-- 記帳資料將由 JavaScript 填充 -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- 3. LISTS (清單) -->
+        <div id="lists-tab" class="tab-content px-4 hidden">
+            <h1 class="text-2xl font-bold mb-4 text-winter-blue">清單與備忘錄 (LISTS)</h1>
+
+            <!-- 行前準備 CheckList -->
+            <div class="bg-powder-white p-4 mb-6 rounded-xl shadow-lg border border-gray-100">
+                <h2 class="text-lg font-semibold mb-3 text-pine-green flex justify-between items-center">
+                    行前準備 CheckList 
+                    <button onclick="resetChecklist()" class="text-sm text-gray-500 hover:text-red-500"><i class="fas fa-redo"></i> 重設</button>
+                </h2>
+                <ul id="prepChecklist" class="space-y-2">
+                    <!-- CheckList items will be populated by JS -->
+                </ul>
+            </div>
+
+            <!-- 個人備忘錄 -->
+            <div class="bg-powder-white p-4 rounded-xl shadow-lg border border-gray-100">
+                <h2 class="text-lg font-semibold mb-3 text-pine-green">個人備忘錄</h2>
+                <textarea id="personalMemo" rows="6" oninput="saveMemo()" placeholder="在這裡輸入任何備註、待辦事項或網址。網址會自動轉換為連結。" class="w-full p-3 border rounded-lg shadow-inner"></textarea>
+                <div id="memoOutput" class="mt-3 p-3 bg-gray-50 rounded-lg border text-sm break-words">
+                    <!-- 備忘錄輸出區，用於顯示可點擊的連結 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. INFO (資訊) -->
+        <div id="info-tab" class="tab-content px-4 hidden">
+            <h1 class="text-2xl font-bold mb-4 text-winter-blue">重要資訊 (INFO)</h1>
+
+            <!-- 緊急聯絡資訊 -->
+            <div class="bg-powder-white p-4 mb-6 rounded-xl shadow-lg border border-red-100">
+                <h2 class="text-lg font-semibold mb-3 text-red-600"><i class="fas fa-exclamation-triangle mr-2"></i> 緊急聯絡資訊 (日本)</h2>
+                <ul class="space-y-2 text-pine-green">
+                    <li><i class="fas fa-phone mr-2 text-red-500"></i> 警察 (Police)：<a href="tel:110" class="underline font-medium">110</a></li>
+                    <li><i class="fas fa-ambulance mr-2 text-red-500"></i> 救護車/火警 (Ambulance/Fire)：<a href="tel:119" class="underline font-medium">119</a></li>
+                    <li><i class="fas fa-briefcase mr-2 text-red-500"></i> 駐日辦事處：請自行查詢當前聯絡電話 (非來源資料)</li>
+                    <li><i class="fas fa-heartbeat mr-2 text-red-500"></i> **請務必投保！** 滑雪是高風險運動，請在行前投保相關保險。看骨科是很貴的！</li>
+                </ul>
+            </div>
+
+            <!-- 住宿資訊 (加入地圖連結) -->
+            <div class="bg-powder-white p-4 mb-6 rounded-xl shadow-lg border border-gray-100">
+                <h2 class="text-lg font-semibold mb-3 text-pine-green"><i class="fas fa-house-user mr-2"></i> 住宿地點與資訊</h2>
+
+                <div class="space-y-4 text-sm">
+                    <div class="border-l-4 border-winter-blue pl-2">
+                        <p class="font-bold text-winter-blue">旭川住宿 (2025/12/26 - 12/31)</p>
+                        <p>地址：1条通12丁目209-1, Asahikawa, Hokkaido, 070-0031</p>
+                        <a href="https://maps.app.goo.gl/KDPCAm2G9ciPqe6a8" target="_blank" class="text-blue-500 underline block mt-1"><i class="fas fa-map-marked-alt mr-1"></i> Google 地圖連結</a>
+                        <p class="text-red-500 font-medium mt-1">注意：男生請坐著尿尿。</p>
+                    </div>
+
+                    <div class="border-l-4 border-sunset-orange pl-2">
+                        <p class="font-bold text-sunset-orange">富良野住宿 (2025/12/31 - 2026/01/06)</p>
+                        <p>地址：1944-84 Nakanosawa, Kamifurano-cho, Sorachi-gun, 北海道 071-0577, 日本</p>
+                        <a href="https://maps.app.goo.gl/mCJy1fuFEsMJe9LE6" target="_blank" class="text-blue-500 underline block mt-1"><i class="fas fa-map-marked-alt mr-1"></i> Google 地圖連結</a>
+                        <p class="text-red-500 font-medium mt-1">注意：男生請坐著尿尿。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 旅遊注意事項與連結 (保持原樣) -->
+            <div class="bg-powder-white p-4 rounded-xl shadow-lg border border-gray-100">
+                <h2 class="text-lg font-semibold mb-3 text-winter-blue">旅遊注意事項與實用連結</h2>
+
+                <div class="space-y-4">
+                    <p>
+                        <i class="fas fa-cloud-sun mr-2 text-winter-blue"></i> 當地天氣預報：
+                        <a href="https://www.jma.go.jp/jma/index.html" target="_blank" class="text-blue-500 underline">日本氣象廳 (JMA)</a> (非來源資料)
+                    </p>
+                    
+                    <!-- 雪票/課程提醒 (基於來源) -->
+                    <div class="text-sm border-l-4 border-winter-blue pl-2">
+                        <i class="fas fa-skiing mr-2"></i> 雪票/課程提醒：請自行按需求購買滑雪天數的雪票。
+                        <a href="https://tw.wamazing.com/snow/items/11845" target="_blank" class="text-blue-500 underline block ml-4">神居雪票連結</a> 
+                        <a href="https://tw.wamazing.com/snow/items/11830" target="_blank" class="text-blue-500 underline block ml-4">富良野雪票連結 (早鳥請注意截止日 12/10，不可退款)</a>
+                    </div>
+
+                    <!-- 交通注意事項 (基於來源) -->
+                    <div class="text-sm border-l-4 border-sunset-orange pl-2">
+                        <p class="font-bold text-sunset-orange"><i class="fas fa-car mr-2"></i> 交通/分賬提醒：</p>
+                        <p>租車費用與油錢以主要乘車者均攤。</p>
+                        <p>若有高速公路過路費，依實際乘車狀況分帳。</p>
+                        <p>有駕照能力的需攜帶**護照+日文譯本**，特別提醒 **Kevin Yang**!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- 底部導航列 (Fixed Footer Navigation) -->
+    <div id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-powder-white border-t border-gray-200 shadow-2xl z-50 max-w-md mx-auto">
+        <div class="flex justify-around items-center h-16">
+            <button class="nav-btn flex flex-col items-center p-2 text-winter-blue" data-tab="plan-tab">
+                <i class="fas fa-calendar-alt text-xl"></i>
+                <span class="text-xs mt-1">PLAN</span>
+            </button>
+            <button class="nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="wallet-tab">
+                <i class="fas fa-wallet text-xl"></i>
+                <span class="text-xs mt-1">WALLET</span>
+            </button>
+            <button class="nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="lists-tab">
+                <i class="fas fa-list-check text-xl"></i>
+                <span class="text-xs mt-1">LISTS</span>
+            </button>
+            <button class="nav-btn flex flex-col items-center p-2 text-gray-400" data-tab="info-tab">
+                <i class="fas fa-circle-info text-xl"></i>
+                <span class="text-xs mt-1">INFO</span>
+            </button>
+        </div>
+    </div>
+
+
+<script>
+    // ====================================================================
+    // 1. DATA AND CONSTANTS
+    // ====================================================================
+
+    // 成員名單 (用於分賬功能)
+    const GROUP_MEMBERS = [
+        "Tony Han", "Kevin Yang", "Derek Tu", "Jason Hu", "Peter", "Taco", "Ken Ko", "Tony Lin",
+        "Kim Chen", "Ann", "Cindy Yao", "Irene Kuo", "Sophie", "Yian"
+    ];
+
+    // 滑雪場營業時間
+    const SKI_HOURS = {
+        '神居滑雪場': '09:00～16:00',
+        '比布滑雪場': '9:00 - 16:00 (夜滑 16:00 - 20:30)',
+        '旭岳大雪山滑雪場': '9:00～15:40',
+        '富良野滑雪場': '8:30 AM - 4:00 PM (夜滑 4:00 PM - 6:00 PM)',
+        'Tomamu': '8:45 – 16:00 (夜滑 16:00-18:00)'
+    };
+
+    // 行程數據 (包含 isSkiDay 標籤用於顏色區分)
+    const itineraryData = [
+        {
+            date: "12/26 (五)",
+            title: "抵達北海道，入住旭川",
+            details: "札幌機場 → 札幌購物(視情況採購雪具) → 旭川民宿。 (當天入住旭川)",
+            accommodation: "旭川",
+            important: "入住時間：下午 3 點後。衛浴共用，男生請坐著尿尿。",
+            links: [
+                { type: 'GMaps', label: '旭川民宿地址', url: 'https://maps.app.goo.gl/KDPCAm2G9ciPqe6a8' }
+            ],
+            isSkiDay: false
+        },
+        {
+            date: "12/27 (六)",
+            title: "神居滑雪場",
+            details: `滑雪或自由活動。營業時間: ${SKI_HOURS['神居滑雪場']}`,
+            accommodation: "旭川",
+            important: "包車出發！請提早集合。",
+            isSkiDay: true
+        },
+        {
+            date: "12/28 (日)",
+            title: "神居/比布滑雪場",
+            details: `滑雪或自由活動。神居時間: ${SKI_HOURS['神居滑雪場']} / 比布時間: ${SKI_HOURS['比布滑雪場']}`,
+            accommodation: "旭川",
+            isSkiDay: true
+        },
+        {
+            date: "12/29 (一)",
+            title: "旭川旅遊/觀光日",
+            details: "自由活動或在周圍觀光。",
+            accommodation: "旭川",
+            isSkiDay: false // 旅遊日
+        },
+        {
+            date: "12/30 (二)",
+            title: "神居滑雪場",
+            details: `滑雪或自由活動。營業時間: ${SKI_HOURS['神居滑雪場']}`,
+            accommodation: "旭川",
+            important: "早餐/晚餐原則上自理或超市採買回民宿煮食。",
+            isSkiDay: true
+        },
+        {
+            date: "12/31 (三)",
+            title: "移動日：旭岳/轉往富良野",
+            details: `旭岳大雪山滑雪場 (退房 10:00) → 富良野民宿。旭岳時間: ${SKI_HOURS['旭岳大雪山滑雪場']}`,
+            accommodation: "富良野",
+            important: "旭川退房 10:00，富良野入住 3 點後。包車移動，請準時。",
+            isSkiDay: true
+        },
+        {
+            date: "2026/1/1 (四)",
+            title: "富良野旅遊/觀光日",
+            details: "滑雪或在周圍觀光。",
+            accommodation: "富良野",
+            isSkiDay: false // 旅遊日
+        },
+        {
+            date: "2026/1/2 (五)",
+            title: "富良野滑雪場",
+            details: `滑雪或自由活動。營業時間: ${SKI_HOURS['富良野滑雪場']}`,
+            accommodation: "富良野",
+            isSkiDay: true
+        },
+        {
+            date: "2026/1/3 (六)",
+            title: "Tomamu (星野) 滑雪場",
+            details: `遠征 Tomamu (當日來回)。營業時間: ${SKI_HOURS['Tomamu']}`,
+            accommodation: "富良野",
+            important: "包車出發，長途移動，請務必準時！",
+            isSkiDay: true
+        },
+        {
+            date: "2026/1/4 (日)",
+            title: "Tomamu (星野) 滑雪場",
+            details: `遠征 Tomamu (當日來回)。營業時間: ${SKI_HOURS['Tomamu']}`,
+            accommodation: "富良野",
+            isSkiDay: true
+        },
+        {
+            date: "2026/1/5 (一)",
+            title: "富良野滑雪場",
+            details: `滑雪或自由活動。營業時間: ${SKI_HOURS['富良野滑雪場']}`,
+            accommodation: "富良野",
+            isSkiDay: true
+        },
+        {
+            date: "2026/1/6 (二)",
+            title: "返程",
+            details: "富良野退房 (10:00) → 札幌機場 → 桃園。 (解散回家)",
+            accommodation: "解散回家",
+            important: "富良野退房 10:00，確保行李上車。",
+            isSkiDay: false
+        },
+    ];
+
+    // 行前準備 CheckList 初始數據 
+    const initialChecklist = [
+        "護照、機票、錢包",
+        "滑雪衣褲 (雪衣可租借，但自備較省)",
+        "中層保暖衣物 (不建議穿發熱衣)",
+        "排汗底層衣 (建議兩套)",
+        "毛帽、手套、內層手套",
+        "護目鏡/雪鏡 (可防止臉部凍傷，建議有長簷帽沿)",
+        "雪鞋/雪板 (基本款可租借，或自備)",
+        "安全帽/護具 (建議配戴)",
+        "旅遊保險 (必須)", //
+        "藥品、個人用品",
+        "駕照日文譯本 (Kevin Yang 務必攜帶)", //
+        "民宿食物採買清單"
+    ];
+
+    // LocalStorage key
+    const RATE_KEY = 'customExchangeRate';
+    const EXPENSES_KEY = 'travelExpenses';
+    const CHECKLIST_KEY = 'travelChecklist';
+    const MEMO_KEY = 'personalMemoContent';
+
+    // ====================================================================
+    // 2. CORE UTILITIES: INIT & TAB SWITCHING
+    // ====================================================================
+
+    /**
+     * 初始化應用程式
+     */
+    function initApp() {
+        setupTabSwitching();
+        renderItinerary();
+        loadExchangeRate();
+        renderMemberOptions(); 
+        renderExpenses();
+        renderSettlement(); 
+        loadAndRenderChecklist();
+        loadAndRenderMemo();
+        
+        showTab('plan-tab');
+    }
+
+    /**
+     * 處理分頁切換
+     */
+    function setupTabSwitching() {
+        const navButtons = document.querySelectorAll('.nav-btn');
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.getAttribute('data-tab');
+                showTab(targetTab);
+                if (targetTab === 'wallet-tab') {
+                    renderSettlement();
+                }
+            });
+        });
+    }
+
+    /**
+     * 顯示特定分頁
+     */
+    function showTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.add('hidden');
+        });
+        document.getElementById(tabId).classList.remove('hidden');
+
+        document.querySelectorAll('.nav-btn').forEach(button => {
+            button.classList.remove('text-winter-blue', 'font-bold');
+            button.classList.add('text-gray-400');
+        });
+        const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
+        activeBtn.classList.remove('text-gray-400');
+        activeBtn.classList.add('text-winter-blue', 'font-bold');
+    }
+
+
+    // ====================================================================
+    // 3. PLAN MODULE (行程表 - 滑雪日變色)
+    // ====================================================================
+
+    /**
+     * 渲染行程時間軸 (滑雪日高亮)
+     */
+    function renderItinerary() {
+        const container = document.getElementById('itinerary-timeline');
+        container.innerHTML = '';
+
+        itineraryData.forEach((item) => {
+            const isImportantDay = item.important && (item.important.includes('包車出發') || item.important.includes('退房'));
+            
+            // 根據 isSkiDay 決定卡片顏色
+            const cardClass = item.isSkiDay
+                ? 'bg-ski-highlight/50 text-pine-green border-2 border-ski-highlight shadow-lg'
+                : 'bg-powder-white text-pine-green border border-gray-100 shadow-lg';
+            
+            const markerColor = item.isSkiDay ? 'bg-winter-blue ring-4 ring-ski-highlight' : 'bg-winter-blue ring-4 ring-white';
+            const importantColor = isImportantDay ? 'bg-sunset-orange/10 text-red-700 font-semibold' : 'bg-gray-100 text-gray-700';
+            
+            const linksHtml = (item.links || []).map(link => `
+                <a href="${link.url}" target="_blank" class="text-sm mt-1 inline-flex items-center px-3 py-1 rounded-full bg-winter-blue/10 text-winter-blue hover:opacity-80 transition duration-150">
+                    <i class="fas fa-map-marker-alt mr-1"></i> ${link.label}
+                </a>
+            `).join('');
+
+            const html = `
+                <div class="relative pb-8">
+                    <!-- 時間軸線 -->
+                    <div class="absolute top-0 left-4 -ml-px h-full w-0.5 timeline-line"></div>
+
+                    <!-- 圓點標記 -->
+                    <div class="relative flex items-center space-x-3">
+                        <div class="h-8 w-8 rounded-full ${markerColor} flex items-center justify-center z-10">
+                            <i class="fas fa-snowflake text-white text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-gray-500">${item.date}</p>
+                        </div>
+                    </div>
+
+                    <!-- 行程卡片 -->
+                    <div class="ml-12 mt-2 p-4 rounded-xl transition duration-300 ${cardClass}">
+                        <h3 class="text-lg font-bold text-winter-blue">${item.title}</h3>
+                        <p class="text-sm mt-1 text-gray-700">${item.details}</p>
+                        <p class="text-xs mt-2 font-medium text-gray-700">住宿：${item.accommodation}</p>
+                        
+                        ${item.important ? `<p class="text-xs mt-2 p-2 rounded ${importantColor}">注意：${item.important}</p>` : ''}
+                        
+                        ${linksHtml ? `<div class="mt-3">${linksHtml}</div>` : ''}
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+    }
+
+    // ====================================================================
+    // 4. WALLET MODULE (記帳與匯率, 包含 付款人與結算)
+    // ====================================================================
+
+    /**
+     * 渲染付款人下拉選單和分賬成員複選框
+     */
+    function renderMemberOptions() {
+        const payerSelect = document.getElementById('payerSelect');
+        const memberCheckboxes = document.getElementById('memberCheckboxes');
+        
+        payerSelect.innerHTML = '<option value="" disabled selected>請選擇付款人</option>';
+        memberCheckboxes.innerHTML = '';
+        
+        GROUP_MEMBERS.forEach((member, index) => {
+            // 填充付款人選項
+            const option = document.createElement('option');
+            option.value = member;
+            option.textContent = member;
+            payerSelect.appendChild(option);
+
+            // 填充分賬成員複選框 (默認全選)
+            const checkboxHtml = `
+                <div class="flex items-center">
+                    <input type="checkbox" id="member-${index}" value="${member}" checked onchange="updateSelectedCount()" class="member-checkbox h-4 w-4 text-winter-blue rounded focus:ring-winter-blue border-gray-300">
+                    <label for="member-${index}" class="ml-1 text-xs text-pine-green">${member}</label>
+                </div>
+            `;
+            memberCheckboxes.insertAdjacentHTML('beforeend', checkboxHtml);
+        });
+        updateSelectedCount(); 
+    }
+
+    /**
+     * 更新已選擇的成員數量
+     */
+    function updateSelectedCount() {
+        const selected = document.querySelectorAll('.member-checkbox:checked').length;
+        document.getElementById('selectedCount').textContent = selected;
+    }
+
+
+    /**
+     * 儲存單筆消費紀錄 (包含分賬資訊和付款人)
+     */
+    async function saveExpense(event) {
+        event.preventDefault();
+        const payer = document.getElementById('payerSelect').value; 
+        const item = document.getElementById('expenseItem').value;
+        const amount = parseFloat(document.getElementById('expenseAmount').value);
+        const fileInput = document.getElementById('expensePhoto');
+        const rate = parseFloat(document.getElementById('exchangeRate').value);
+        
+        const participants = Array.from(document.querySelectorAll('.member-checkbox:checked')).map(cb => cb.value);
+
+        if (!payer) {
+             alert("請選擇付款人。");
+             return;
+        }
+        if (isNaN(amount) || amount <= 0) {
+            alert("請輸入有效的日幣金額。");
+            return;
+        }
+        if (participants.length === 0) {
+            alert("請至少選擇一位分賬成員。");
+            return;
+        }
+
+
+        let thumbnailBase64 = '';
+        if (fileInput.files.length > 0) {
+            try {
+                thumbnailBase64 = await compressImageToBase64(fileInput.files);
+            } catch (error) {
+                console.error("圖片壓縮失敗:", error);
+                alert("圖片處理失敗，將不儲存照片。");
+            }
+        }
+
+        const twdAmount = amount * rate;
+        const splitCount = participants.length;
+        const twdPerPerson = twdAmount / splitCount;
+
+        const newExpense = {
+            id: Date.now(),
+            item: item,
+            jpy: amount,
+            twd: twdAmount,
+            payer: payer, 
+            splitCount: splitCount,
+            twdPerPerson: twdPerPerson,
+            participants: participants,
+            date: new Date().toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' }),
+            thumbnail: thumbnailBase64
+        };
+
+        const expenses = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
+        expenses.unshift(newExpense); 
+        localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
+
+        // 重設表單與預覽
+        document.getElementById('expenseForm').reset();
+        document.getElementById('imagePreview').classList.add('hidden');
+        document.getElementById('imagePreview').src = '';
+        renderMemberOptions(); 
+        
+        renderExpenses();
+        renderSettlement(); 
+    }
+
+    /**
+     * 渲染記帳歷史列表
+     */
+    function renderExpenses() {
+        const expenses = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
+        const listEl = document.getElementById('expenseList');
+        listEl.innerHTML = '';
+        
+        let totalJpy = 0;
+        let totalTwd = 0;
+
+        expenses.forEach(expense => {
+            totalJpy += expense.jpy;
+            totalTwd += expense.twd;
+
+            const thumbnailHtml = expense.thumbnail 
+                ? `<img src="${expense.thumbnail}" alt="收據" class="w-16 h-16 object-cover rounded mr-3 border border-gray-200">`
+                : `<div class="w-16 h-16 bg-gray-100 rounded mr-3 flex items-center justify-center text-gray-400 text-xs"><i class="fas fa-image"></i> 無圖</div>`;
+            
+            const splitDetailHtml = expense.splitCount > 0 
+                ? `<p class="text-xs text-gray-500 mt-1">分攤給 ${expense.splitCount} 人，每人約 ${Math.round(expense.twdPerPerson).toLocaleString()} TWD</p>
+                   <p class="text-xs text-gray-400 truncate mt-0.5" title="${expense.participants.join(', ')}">成員: ${expense.participants.join(', ')}</p>`
+                : '';
+
+            const itemHtml = `
+                <li class="flex items-center justify-between bg-powder-white p-3 rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex items-start flex-1 min-w-0">
+                        ${thumbnailHtml}
+                        <div class="flex-1">
+                            <p class="font-medium text-pine-green truncate">${expense.item} (${expense.date})</p>
+                            <p class="text-xs text-winter-blue mt-0.5"><i class="fas fa-user-tag mr-1"></i> 付款人: ${expense.payer}</p>
+                            ${splitDetailHtml}
+                        </div>
+                    </div>
+                    
+                    <div class="text-right ml-4">
+                        <p class="text-base font-bold text-pine-green">${Math.round(expense.jpy).toLocaleString()} JPY</p>
+                        <p class="text-sm text-sunset-orange">${Math.round(expense.twd).toLocaleString()} TWD</p>
+                    </div>
+
+                    <button onclick="deleteExpense(${expense.id})" class="ml-3 text-gray-400 hover:text-red-500 self-start mt-1">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </li>
+            `;
+            listEl.insertAdjacentHTML('beforeend', itemHtml);
+        });
+
+        // 插入總計
+        if (expenses.length > 0) {
+            const totalHtml = `
+                <li class="flex justify-between items-center bg-winter-blue text-white p-4 rounded-xl shadow-lg mt-4 font-bold">
+                    <span>總計消費：</span>
+                    <div class="text-right">
+                        <p>${Math.round(totalJpy).toLocaleString()} JPY</p>
+                        <p class="text-sunset-orange">${Math.round(totalTwd).toLocaleString()} TWD</p>
+                    </div>
+                </li>
+            `;
+            listEl.insertAdjacentHTML('afterbegin', totalHtml);
+        } else {
+            listEl.innerHTML = '<p class="text-center text-gray-500">尚無消費紀錄。</p>';
+        }
+    }
+    
+    // --- 結算功能 ---
+
+    /**
+     * 計算每個人的淨餘額（正數：應收；負數：應付）
+     */
+    function calculateNetBalance() {
+        const expenses = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
+        const netBalance = new Map();
+
+        GROUP_MEMBERS.forEach(member => netBalance.set(member, 0));
+
+        expenses.forEach(expense => {
+            const twdPerPerson = expense.twdPerPerson;
+            
+            // 1. 付款人：餘額增加 (墊付了錢)
+            netBalance.set(expense.payer, netBalance.get(expense.payer) + expense.twd);
+
+            // 2. 參與者：餘額減少 (產生了債務)
+            expense.participants.forEach(participant => {
+                netBalance.set(participant, netBalance.get(participant) - twdPerPerson);
+            });
+        });
+
+        const finalBalance = new Map();
+        netBalance.forEach((balance, name) => {
+            if (Math.abs(balance) > 0.5) { 
+                finalBalance.set(name, balance);
+            }
+        });
+        return finalBalance;
+    }
+
+    /**
+     * 渲染最終結算結果
+     */
+    function renderSettlement() {
+        const balances = calculateNetBalance();
+        const outputEl = document.getElementById('settlementOutput');
+        outputEl.innerHTML = '';
+
+        if (balances.size === 0) {
+            outputEl.innerHTML = '<p class="text-center text-gray-500">所有賬目已結清，或尚無紀錄。</p>';
+            return;
+        }
+
+        const creditors = []; 
+        const debtors = [];   
+
+        balances.forEach((amount, name) => {
+            if (amount > 0) {
+                creditors.push({ name: name, amount: amount });
+            } else {
+                debtors.push({ name: name, amount: -amount }); 
+            }
+        });
+
+        creditors.sort((a, b) => b.amount - a.amount); 
+        debtors.sort((a, b) => b.amount - a.amount);   
+
+        let transactions = [];
+        let i = 0; 
+        let j = 0; 
+        const tolerance = 0.5; 
+
+        while (i < debtors.length && j < creditors.length) {
+            let debtor = debtors[i];
+            let creditor = creditors[j];
+
+            if (debtor.amount < tolerance) {
+                i++;
+                continue;
+            }
+            if (creditor.amount < tolerance) {
+                j++;
+                continue;
+            }
+
+            const amountToTransfer = Math.min(debtor.amount, creditor.amount);
+
+            transactions.push({
+                from: debtor.name,
+                to: creditor.name,
+                amount: Math.round(amountToTransfer) 
+            });
+
+            debtor.amount -= amountToTransfer;
+            creditor.amount -= amountToTransfer;
+
+            if (debtor.amount < tolerance) i++;
+            if (creditor.amount < tolerance) j++;
+        }
+
+        let html = '<ul class="space-y-2">';
+        transactions.forEach(t => {
+            html += `
+                <li class="p-2 border rounded-lg bg-red-50 text-pine-green flex justify-between items-center text-sm">
+                    <i class="fas fa-arrow-right-long text-red-500 mr-2"></i> 
+                    <span>
+                        <span class="font-bold text-red-700">${t.from}</span> 
+                        <i class="fas fa-angle-right mx-1 text-gray-400"></i> 
+                        <span class="font-bold text-winter-blue">${t.to}</span>
+                    </span>
+                    <span class="font-extrabold text-lg text-sunset-orange">${t.amount.toLocaleString()} TWD</span>
+                </li>
+            `;
+        });
+        html += '</ul>';
+        html += '<p class="text-xs text-center text-gray-500 mt-3">（金額為 TWD 換算後四捨五入取整數）</p>';
+        outputEl.innerHTML = html;
+    }
+
+    // --- 其他公用函數 (圖片壓縮、匯率計算等) ---
+    function compressImageToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.getElementById('imageCanvas');
+                    const MAX_WIDTH = 100;
+                    const scaleFactor = MAX_WIDTH / img.width;
+                    const width = MAX_WIDTH;
+                    const height = img.height * scaleFactor;
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+                img.onerror = reject;
+                img.src = event.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function previewImage(input) {
+        const preview = document.getElementById('imagePreview');
+        if (input.files && input.files) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(input.files);
+        } else {
+            preview.classList.add('hidden');
+            preview.src = '';
+        }
+    }
+    
+    function loadExchangeRate() {
+        const rateInput = document.getElementById('exchangeRate');
+        const savedRate = localStorage.getItem(RATE_KEY);
+        if (savedRate) {
+            rateInput.value = savedRate;
+        }
+        rateInput.addEventListener('input', () => {
+            localStorage.setItem(RATE_KEY, rateInput.value);
+            if (document.getElementById('jpyInput').value) {
+                calculateJpy();
+            }
+        });
+    }
+
+    function calculateJpy() {
+        const jpyInput = document.getElementById('jpyInput').value;
+        const rate = parseFloat(document.getElementById('exchangeRate').value);
+        const jpyResultEl = document.getElementById('jpyResult');
+        const twdResultEl = document.getElementById('twdResult');
+        
+        if (!jpyInput) {
+            jpyResultEl.textContent = '0 JPY';
+            twdResultEl.textContent = '0 TWD';
+            return;
+        }
+
+        let calculatedJpy = 0;
+        try {
+            calculatedJpy = new Function('return ' + jpyInput)();
+            if (isNaN(calculatedJpy)) throw new Error('Invalid calculation');
+
+            const calculatedTwd = calculatedJpy * rate;
+
+            jpyResultEl.textContent = `${Math.round(calculatedJpy).toLocaleString()} JPY`;
+            twdResultEl.textContent = `${Math.round(calculatedTwd).toLocaleString()} TWD`;
+
+        } catch (error) {
+            jpyResultEl.textContent = '錯誤!';
+            twdResultEl.textContent = '請檢查算式';
+        }
+    }
+
+    function deleteExpense(id) {
+        if (!confirm('確定要刪除這筆紀錄嗎？')) return;
+        let expenses = JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]');
+        expenses = expenses.filter(exp => exp.id !== id);
+        localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
+        renderExpenses();
+        renderSettlement(); 
+    }
+    
+    // ====================================================================
+    // 5. LISTS MODULE (清單與備忘錄)
+    // ====================================================================
+
+    function loadAndRenderChecklist() {
+        const savedList = JSON.parse(localStorage.getItem(CHECKLIST_KEY));
+        let checklist;
+        if (savedList && savedList.length > 0) {
+            checklist = savedList;
+        } else {
+            checklist = initialChecklist.map(item => ({ item: item, checked: false }));
+            localStorage.setItem(CHECKLIST_KEY, JSON.stringify(checklist));
+        }
+
+        const listEl = document.getElementById('prepChecklist');
+        listEl.innerHTML = checklist.map((item, index) => `
+            <li class="flex items-center">
+                <input type="checkbox" id="check-${index}" ${item.checked ? 'checked' : ''} onchange="toggleChecklistItem(${index})" class="h-5 w-5 text-winter-blue rounded focus:ring-winter-blue border-gray-300">
+                <label for="check-${index}" class="ml-3 text-base ${item.checked ? 'line-through text-gray-400' : 'text-pine-green'}">${item.item}</label>
+            </li>
+        `).join('');
+    }
+
+    function toggleChecklistItem(index) {
+        const checklist = JSON.parse(localStorage.getItem(CHECKLIST_KEY));
+        checklist[index].checked = !checklist[index].checked;
+        localStorage.setItem(CHECKLIST_KEY, JSON.stringify(checklist));
+        loadAndRenderChecklist();
+    }
+
+    function resetChecklist() {
+        if (!confirm('確定要重設清單嗎？所有項目將恢復為未勾選。')) return;
+        const resetData = initialChecklist.map(item => ({ item: item, checked: false }));
+        localStorage.setItem(CHECKLIST_KEY, JSON.stringify(resetData));
+        loadAndRenderChecklist();
+    }
+
+    function saveMemo() {
+        const memoText = document.getElementById('personalMemo').value;
+        localStorage.setItem(MEMO_KEY, memoText);
+        renderMemoOutput(memoText);
+    }
+
+    function loadAndRenderMemo() {
+        const memoText = localStorage.getItem(MEMO_KEY) || '';
+        document.getElementById('personalMemo').value = memoText;
+        renderMemoOutput(memoText);
+    }
+
+    function renderMemoOutput(text) {
+        const outputEl = document.getElementById('memoOutput');
+        if (!text) {
+            outputEl.innerHTML = '<p class="text-gray-400 italic">無備忘錄內容</p>';
+            return;
+        }
+        
+        const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+        const lines = text.split('\n');
+        let html = '';
+
+        lines.forEach(line => {
+            const parts = line.split(urlRegex);
+            let lineHtml = '';
+            
+            parts.forEach(part => {
+                if (part && part.match(urlRegex)) {
+                    lineHtml += `<a href="${part}" target="_blank" class="bg-winter-blue text-white text-xs font-semibold py-1 px-2 rounded-full inline-block m-1 hover:bg-pine-green transition duration-200"><i class="fas fa-link mr-1"></i> 點擊連結</a>`;
+                } else {
+                    lineHtml += part;
+                }
+            });
+            if (lineHtml.trim() === '') {
+                 html += '<p class="mb-1 h-3"></p>'; 
+            } else {
+                 html += `<p class="mb-1">${lineHtml}</p>`;
+            }
+        });
+        outputEl.innerHTML = html;
+    }
+
+
+    // ====================================================================
+    // 6. INITIALIZATION
+    // ====================================================================
+
+    window.onload = initApp;
+
+</script>
+
 </body>
 </html>
+```
