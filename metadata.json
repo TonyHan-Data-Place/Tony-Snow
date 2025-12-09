@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Hokkaido Ski Companion",
+  "description": "A comprehensive companion app for a Hokkaido ski trip, featuring itinerary management, expense tracking with debt settlement, checklists, and essential travel info.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
